@@ -1,43 +1,58 @@
 /*
-    This is our http api, which we use to send requests to
-    our back-end API. Note we`re using the Axios library
-    for doing this, which is an easy to use AJAX-based
-    library. We could (and maybe should) use Fetch, which
-    is a native (to browsers) standard, but Axios is easier
-    to use when sending JSON back and forth and it`s a Promise-
-    based API which helps a lot with asynchronous communication.
-    
-    @author McKilla Gorilla
+    We are using the fetch API now for our requests from the client to the server.
+    Fetch is a bit lower level than axios, so we have to do a bit more work.
 */
+const BASE = 'http://localhost:4000/store';
 
-import axios from 'axios'
-axios.defaults.withCredentials = true;
-const api = axios.create({
-    baseURL: 'http://localhost:4000/store',
-})
+async function jsonFetch(url, options = {}) {
+  const res = await fetch(url, {
+    credentials: 'include',       
+    headers: { 'Accept': 'application/json', ...(options.headers || {}) },
+    ...options,
+  });
 
-// THESE ARE ALL THE REQUESTS WE`LL BE MAKING, ALL REQUESTS HAVE A
-// REQUEST METHOD (like get) AND PATH (like /top5list). SOME ALSO
-// REQUIRE AN id SO THAT THE SERVER KNOWS ON WHICH LIST TO DO ITS
-// WORK, AND SOME REQUIRE DATA, WHICH WE WE WILL FORMAT HERE, FOR WHEN
-// WE NEED TO PUT THINGS INTO THE DATABASE OR IF WE HAVE SOME
-// CUSTOM FILTERS FOR QUERIES
-export const createPlaylist = (newListName, newSongs, userEmail) => {
-    return api.post(`/playlist/`, {
-        // SPECIFY THE PAYLOAD
-        name: newListName,
-        songs: newSongs,
-        ownerEmail: userEmail
-    })
+  // Try to read JSON if present
+  const contentType = res.headers.get('content-type') || '';
+  const hasJson = contentType.includes('application/json');
+  const data = hasJson ? await res.json().catch(() => null) : null;
+
+  if (!res.ok) {
+    const msg = (data && data.message) || res.statusText || 'Request failed';
+    const err = new Error(msg);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
 }
-export const deletePlaylistById = (id) => api.delete(`/playlist/${id}`)
-export const getPlaylistById = (id) => api.get(`/playlist/${id}`)
-export const getPlaylistPairs = () => api.get(`/playlistpairs/`)
-export const updatePlaylistById = (id, playlist) => {
-    return api.put(`/playlist/${id}`, {
-        // SPECIFY THE PAYLOAD
-        playlist : playlist
-    })
+
+export function createPlaylist(playlist) {
+  return jsonFetch(`${BASE}/playlist`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ playlist }),
+  });
+}
+/** DELETE */
+export function deletePlaylistById(id) {
+  return jsonFetch(`${BASE}/playlist/${id}`, { method: 'DELETE' });
+}
+
+/** GET Playlist by ID*/
+export function getPlaylistById(id) {
+  return jsonFetch(`${BASE}/playlist/${id}`, { method: 'GET' });
+}
+/** GET Playlist by Pairs*/
+export function getPlaylistPairs() {
+  return jsonFetch(`${BASE}/playlistpairs`, { method: 'GET' });
+}
+/** PUT */
+export function updatePlaylistById(id, playlist) {
+  return jsonFetch(`${BASE}/playlist/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ playlist }),
+  });
 }
 
 const apis = {
