@@ -1,5 +1,5 @@
 const auth = require('../auth')
-const User = require('../models/user-model')
+const db = require('../db')
 const bcrypt = require('bcryptjs')
 
 getLoggedIn = async (req, res) => {
@@ -13,7 +13,7 @@ getLoggedIn = async (req, res) => {
             })
         }
 
-        const loggedInUser = await User.findOne({ _id: userId });
+        const loggedInUser = await db.getUserById(userId);
         console.log("loggedInUser: " + loggedInUser);
 
         return res.status(200).json({
@@ -41,7 +41,7 @@ loginUser = async (req, res) => {
                 .json({ errorMessage: "Please enter all required fields." });
         }
 
-        const existingUser = await User.findOne({ email: email });
+        const existingUser = await db.getUserByEmail(email);
         console.log("existingUser: " + existingUser);
         if (!existingUser) {
             return res
@@ -121,7 +121,7 @@ registerUser = async (req, res) => {
                 })
         }
         console.log("password and password verify match");
-        const existingUser = await User.findOne({ email: email });
+        const existingUser = await db.getUserByEmail(email);
         console.log("existingUser: " + existingUser);
         if (existingUser) {
             return res
@@ -137,12 +137,11 @@ registerUser = async (req, res) => {
         const passwordHash = await bcrypt.hash(password, salt);
         console.log("passwordHash: " + passwordHash);
 
-        const newUser = new User({firstName, lastName, email, passwordHash});
-        const savedUser = await newUser.save();
+        const savedUser = await db.createUser({ firstName, lastName, email, passwordHash });
         console.log("new user saved: " + savedUser._id);
 
         // LOGIN THE USER
-        const token = auth.signToken(savedUser._id);
+        const token = auth.signToken(existingUser._id || existingUser.id);
         console.log("token:" + token);
 
         await res.cookie("token", token, {

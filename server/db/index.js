@@ -1,15 +1,12 @@
+require('dotenv').config();
 
-const mongoose = require('mongoose')
-const dotenv = require('dotenv')
-dotenv.config();
+const vendor = (process.env.DB_VENDOR || 'mongo').toLowerCase();
+let impl;
 
-mongoose
-    .connect(process.env.DB_CONNECT, { useNewUrlParser: true })
-    .catch(e => {
-        console.error('Connection error', e.message)
-    })
+if (['postgres', 'postgresql', 'pg'].includes(vendor)) {
+  impl = require('./postgresql');   // exports a ready instance
+} else {
+  impl = require('./mongodb');      // default
+}
 
-const db = mongoose.connection
-
-module.exports = db
-
+module.exports = impl;

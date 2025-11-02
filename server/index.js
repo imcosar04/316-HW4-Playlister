@@ -5,7 +5,8 @@ const dotenv = require('dotenv')
 const cookieParser = require('cookie-parser')
 
 // CREATE OUR SERVER
-dotenv.config()
+const path = require('path')
+dotenv.config({ path: path.resolve(__dirname, '.env') })
 const PORT = process.env.PORT || 4000;
 const app = express()
 
@@ -26,9 +27,15 @@ app.use('/store', storeRouter)
 
 // INITIALIZE OUR DATABASE OBJECT
 const db = require('./db')
-db.on('error', console.error.bind(console, 'Database connection error:'))
-
-// PUT THE SERVER IN LISTENING MODE
-app.listen(PORT, () => console.log(`Playlister Server running on port ${PORT}`))
-
-
+;(async () => {
+  try {
+    if (typeof db.connect === 'function') {
+      await db.connect()
+      console.log(`Connected to ${process.env.DB_VENDOR || 'mongo'} database`)
+    }
+    app.listen(PORT, () => console.log(`Playlister Server running on port ${PORT}`))
+  } catch (err) {
+    console.error('Failed to start server:', err)
+    process.exit(1)
+  }
+})()
