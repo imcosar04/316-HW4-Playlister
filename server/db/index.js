@@ -1,12 +1,21 @@
-require('dotenv').config();
+// server/db/index.js
+const MongoDBManager = require('./managers/mongo-db-manager');
+const SQLDBManager   = require('./managers/sql-db-manager');
 
 const vendor = (process.env.DB_VENDOR || 'mongo').toLowerCase();
-let impl;
-
-if (['postgres', 'postgresql', 'pg'].includes(vendor)) {
-  impl = require('./postgresql');   // exports a ready instance
-} else {
-  impl = require('./mongodb');      // default
+let manager;
+switch (vendor) {
+  case 'sql':
+  case 'sequelize':
+  case 'postgres':
+  case 'postgresql':
+    manager = new SQLDBManager();
+    break;
+  case 'mongo':
+  default:
+    manager = new MongoDBManager();
+    break;
 }
 
-module.exports = impl;
+module.exports = manager;
+
